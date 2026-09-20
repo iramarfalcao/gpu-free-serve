@@ -204,7 +204,12 @@ class OllamaEngine(Engine):
         print(f"[gpufree] $ ollama serve (port {self.port})", flush=True)
         self.process = subprocess.Popen(["ollama", "serve"], env=env)
         self._wait_daemon(env)
-        print(f"[gpufree] Pulling {self.spec.id}...", flush=True)
+        # Notebooks swallow Ollama's progress bar, so warn before the long silence.
+        print(
+            f"[gpufree] Pulling {self.spec.id} (several GB; notebooks show no progress "
+            "bar for this, give it a few minutes)...",
+            flush=True,
+        )
         _run(["ollama", "pull", self.spec.id], env=env)
         return self.process
 

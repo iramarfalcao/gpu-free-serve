@@ -21,6 +21,7 @@ def _connect(args: argparse.Namespace) -> int:
         if not url.endswith("/v1"):
             url += "/v1"
         data = {"url": url, "api_key": args.key or ""}
+    _fill_model(data)
     path = state.save(data)
     print(f"Connected to {data['url']}")
     if data.get("model"):
@@ -51,6 +52,19 @@ def _models(_: argparse.Namespace) -> int:
     return 0
 
 
+def _fill_model(data: dict) -> str | None:
+    """Ask the endpoint which model it serves, so `chat` needs no -m."""
+    if data.get("model_id"):
+        return data["model_id"]
+    try:
+        served = api.models(data)
+    except api.ApiError:
+        return None  # offline right now; chat will resolve it later
+    if served:
+        data["model_id"] = served[0]
+    return data.get("model_id")
+
+
 def _chat(args: argparse.Namespace) -> int:
     data = state.load()
     prompt = " ".join(args.prompt) if args.prompt else sys.stdin.read().strip()
@@ -61,8 +75,12 @@ def _chat(args: argparse.Namespace) -> int:
     if args.system:
         messages.append({"role": "system", "content": args.system})
     messages.append({"role": "user", "content": prompt})
+    model = args.model or _fill_model(data)
+    if not model:
+        print("could not work out which model to use; pass -m", file=sys.stderr)
+        return 1
     for piece in api.chat_stream(
-        data, messages, model=args.model, temperature=args.temperature, max_tokens=args.max_tokens
+        data, messages, model=model, temperature=args.temperature, max_tokens=args.max_tokens
     ):
         sys.stdout.write(piece)
         sys.stdout.flush()

@@ -42,7 +42,7 @@ def chat_stream(
     state: dict, messages: list[dict], model: str | None = None, **params
 ) -> Iterator[str]:
     payload = {
-        "model": model or state.get("model") or "default",
+        "model": model or state.get("model_id") or state.get("model") or "default",
         "messages": messages,
         "stream": True,
         **params,
