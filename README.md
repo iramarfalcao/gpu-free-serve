@@ -21,6 +21,7 @@ curl http://127.0.0.1:8787/v1/chat/completions -H 'Content-Type: application/jso
 - [Quick start](#quick-start)
 - [Choosing models (`models.yaml`)](#choosing-models-modelsyaml)
 - [Capacity: what fits where](#capacity-what-fits-where)
+- [Coding models](#coding-models)
 - [Secrets and `.env`](#secrets-and-env)
 - [CLI reference](#cli-reference)
 - [Server options (notebook side)](#server-options-notebook-side)
@@ -226,6 +227,40 @@ takes a while.
 **Ollama has a different ceiling.** GGUF offloads layers to system RAM, so on Kaggle
 (30 GB RAM + 16 GB VRAM) even a 70B Q4 will load — at a few tokens per second, because
 the CPU layers dominate. vLLM never spills to RAM: it either fits in VRAM or fails.
+
+## Coding models
+
+These all fit **one** T4, so they run on free Colab *and* on Kaggle:
+
+| Catalog name | Weights | Usable context on a T4 | Why |
+|---|---|---|---|
+| `qwen2.5-coder-7b-awq` | ~5.5 GiB | 16–32k | Best code/VRAM trade-off today. FIM support, plenty of room left for KV cache. **Start here.** |
+| `qwen2.5-coder-14b-awq` | ~9.5 GiB | 4–8k | Clear step up on refactors and multi-file work. Fits, but tight — hence `max-model-len: 4096`. |
+| `qwen2.5-coder-1.5b` | ~3.1 GiB | 16k+ | Instant responses; use it for editor autocomplete (FIM), not for chat. |
+| `qwen2.5-coder-7b-gguf` | ~4.7 GiB | 8k | Same family through Ollama — up in a minute when you do not want to wait for vLLM. |
+
+Kaggle only, using both GPUs:
+
+| Catalog name | Weights | Why |
+|---|---|---|
+| `qwen2.5-coder-32b-awq-2gpu` | ~19.5 GiB | The best coding model that runs on a free GPU. Needs `tensor-parallel-size: 2`, so Colab free cannot run it. |
+
+Also worth trying, not in the catalog: `google/codegemma-7b-it` (gated, needs `HF_TOKEN`),
+`Qwen/Qwen2.5-Coder-3B-Instruct` (fp16, ~6.2 GiB), and community 4-bit builds of
+StarCoder2-15B or DeepSeek-Coder-V2-Lite — check the file sizes in the repo first, since
+third-party quantizations vary in quality.
+
+Three caveats worth knowing before you judge the output:
+
+1. **A T4 is Turing (sm75).** AWQ runs, but on the older kernel: Marlin, the fast one,
+   needs Ampere (sm80+), and FP8 does not exist here at all. Expect roughly 15–30 tok/s
+   on a 7B, not the numbers you see in A100 benchmarks.
+2. **One model per session.** For a big chat model *and* a small autocomplete model at
+   the same time, run two notebooks (for example the 1.5B on Colab and the 32B on
+   Kaggle) and connect to each with `--url`/`--key` — `gpufree connect` stores one
+   endpoint at a time.
+3. **Autocomplete needs `/v1/completions`**, not just chat. vLLM serves both, so
+   Continue's `tabAutocompleteModel` works against the same endpoint.
 
 ## Secrets and `.env`
 

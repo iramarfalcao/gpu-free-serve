@@ -22,10 +22,26 @@ models:
   qwen2.5-coder-7b-awq:
     engine: vllm
     id: Qwen/Qwen2.5-Coder-7B-Instruct-AWQ
-    description: "Coding model. Point Continue/Cursor at the local proxy."
+    description: "Best code/VRAM trade-off on a single T4. Point Continue/Cursor here."
     args:
       max-model-len: 8192
       gpu-memory-utilization: 0.90
+
+  qwen2.5-coder-14b-awq:
+    engine: vllm
+    id: Qwen/Qwen2.5-Coder-14B-Instruct-AWQ
+    description: "Stronger on refactors. Fits one T4, but only with a short context."
+    args:
+      max-model-len: 4096
+      gpu-memory-utilization: 0.92
+
+  qwen2.5-coder-1.5b:
+    engine: vllm
+    id: Qwen/Qwen2.5-Coder-1.5B-Instruct
+    description: "Tiny and instant — for editor autocomplete (FIM), not for chat."
+    args:
+      max-model-len: 16384
+      dtype: half
 
   llama3.1-8b-awq:
     engine: vllm
@@ -51,6 +67,15 @@ models:
       dtype: half
 
   # Kaggle hands you 2x T4: enough for a bigger model with tensor parallelism.
+  qwen2.5-coder-32b-awq-2gpu:
+    engine: vllm
+    id: Qwen/Qwen2.5-Coder-32B-Instruct-AWQ
+    description: "Best coding model that runs on a free GPU. Kaggle only (2 GPUs)."
+    args:
+      tensor-parallel-size: 2
+      max-model-len: 8192
+      gpu-memory-utilization: 0.92
+
   qwen2.5-14b-awq-2gpu:
     engine: vllm
     id: Qwen/Qwen2.5-14B-Instruct-AWQ
