@@ -9,7 +9,7 @@ description = "Run LLMs on free Colab/Kaggle GPUs and call them from your machin
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Iramar Falcão" }]
+authors = [{ name = "Iramar Falcao" }]
 keywords = ["llm", "vllm", "ollama", "colab", "kaggle", "openai-api", "gpu"]
 dependencies = []  # the local client is stdlib-only on purpose
 
