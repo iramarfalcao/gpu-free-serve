@@ -22,7 +22,11 @@ def _run(cmd: list[str] | str, **kwargs) -> subprocess.CompletedProcess:
     shell = isinstance(cmd, str)
     printable = cmd if shell else " ".join(cmd)
     print(f"[gpufree] $ {printable}", flush=True)
-    return subprocess.run(cmd, shell=shell, check=True, **kwargs)
+    try:
+        return subprocess.run(cmd, shell=shell, check=True, **kwargs)
+    except subprocess.CalledProcessError as exc:
+        # A traceback here would only point at this line; the real cause is above.
+        raise EngineError(f"command failed (exit {exc.returncode}): {printable}") from None
 
 
 def gpu_info() -> list[dict]:
@@ -171,8 +175,24 @@ class OllamaEngine(Engine):
         if shutil.which("ollama"):
             print("[gpufree] Ollama already installed.", flush=True)
             return
+        self._ensure_zstd()
         print("[gpufree] Installing Ollama...", flush=True)
         _run("curl -fsSL https://ollama.com/install.sh | sh")
+
+    @staticmethod
+    def _ensure_zstd() -> None:
+        """Ollama ships a .tar.zst; the Colab image has no zstd to unpack it."""
+        if shutil.which("zstd"):
+            return
+        if not shutil.which("apt-get"):
+            raise EngineError(
+                "the Ollama installer needs `zstd` and this image has no apt-get. "
+                "Install zstd yourself, or use an `engine: vllm` model."
+            )
+        print("[gpufree] Installing zstd (needed by the Ollama installer)...", flush=True)
+        sudo = [] if hasattr(os, "geteuid") and os.geteuid() == 0 else ["sudo"]
+        subprocess.run(sudo + ["apt-get", "-qq", "update"], check=False)
+        _run(sudo + ["apt-get", "-qq", "install", "-y", "zstd"])
 
     def _env(self) -> dict:
         env = os.environ.copy()
