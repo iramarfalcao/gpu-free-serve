@@ -20,6 +20,7 @@ curl http://127.0.0.1:8787/v1/chat/completions -H 'Content-Type: application/jso
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [Choosing models (`models.yaml`)](#choosing-models-modelsyaml)
+- [Capacity: what fits where](#capacity-what-fits-where)
 - [Secrets and `.env`](#secrets-and-env)
 - [CLI reference](#cli-reference)
 - [Server options (notebook side)](#server-options-notebook-side)
@@ -158,10 +159,73 @@ python -m gpufree.server.serve --model ollama:llama3.1:8b             # Ollama
 | Models | anything on the Hub (prefer AWQ/GPTQ on a T4) | GGUF from the Ollama library |
 | Best for | serving a model for hours | quick tests, tiny GPUs, embeddings |
 
-**Fitting a free T4 (16 GB):** a 7–8B model in 4-bit AWQ is the sweet spot. Full fp16 7B
-barely fits and leaves no room for KV cache. If the engine dies at boot, lower
-`max-model-len`, lower `gpu-memory-utilization`, or pick a smaller model.
-On Kaggle's 2× T4 you can add `tensor-parallel-size: 2` and run a 14B.
+**Short version:** a 7–8B model in 4-bit AWQ is the sweet spot on a free T4. See
+[Capacity: what fits where](#capacity-what-fits-where) for the numbers.
+
+## Capacity: what fits where
+
+### What the free tiers give you
+
+| | Colab (free) | Kaggle |
+|---|---|---|
+| GPU | 1× T4 — **16 GB VRAM** (~15.0 GiB usable) | 2× T4 (**16 GB each**, not pooled) or 1× P100 16 GB |
+| System RAM | **~12.7 GB** | **~30 GB** |
+| Disk | ~100 GB under `/content` | ~70 GB, with `/kaggle/working` capped near 20 GB |
+| vCPU | 2 | 4 |
+
+Session and quota limits are in [Free-tier reality check](#free-tier-reality-check).
+
+### The VRAM budget
+
+What decides whether a model runs is VRAM, not system RAM:
+
+```
+weights ≤ VRAM × gpu-memory-utilization − KV cache − ~1 GiB (activations, CUDA graphs)
+```
+
+| Setup | Total VRAM | Budget at `gpu-memory-utilization: 0.90` | **Practical weight ceiling** |
+|---|---|---|---|
+| Colab free (1× T4) | 15.0 GiB | ~13.5 GiB | **~10–11 GiB** (leaving ~2 GiB of KV cache) |
+| Kaggle, 1 GPU (T4 or P100) | 15.0 GiB | ~13.5 GiB | **~10–11 GiB** |
+| Kaggle, 2× T4 with `tensor-parallel-size: 2` | 30.0 GiB | ~27 GiB | **~21–22 GiB** |
+
+### Translated into parameters
+
+Roughly how much VRAM one billion parameters costs:
+
+| Precision | GiB per 1B params | Ceiling on one T4 | Ceiling on Kaggle with TP=2 |
+|---|---|---|---|
+| fp16 / bf16 | ~2.0 | **~5B** (a 7B in fp16 is 14 GiB — does not fit) | **~10B** |
+| 8-bit (GPTQ/AWQ int8) | ~1.0 | **~10B** | **~21B** |
+| 4-bit (AWQ/GPTQ) | ~0.55–0.65 | **~16–18B** | **~32–34B** |
+
+### Real models
+
+| Model | Weights | 1× T4 | Kaggle 2× T4 |
+|---|---|---|---|
+| Phi-3.5-mini 3.8B fp16 | 7.6 GiB | yes | yes |
+| Qwen2.5 7B / Llama 3.1 8B **AWQ** | ~5.5 GiB | yes, with room for long context | yes |
+| Qwen2.5 7B fp16 | ~15 GiB | no | yes |
+| Qwen2.5 14B AWQ | ~9.5 GiB | tight — short KV cache | yes, comfortable |
+| Qwen2.5 32B AWQ | ~19.5 GiB | no | tight — context around 4–8k |
+| Llama 3.1 70B AWQ | ~39 GiB | no | no |
+
+Two things that bite in practice:
+
+1. **The KV cache eats what is left.** On a 7B with GQA it costs ~60–100 MiB per 1k
+   tokens per sequence, so `max-model-len: 8192` already reserves ~0.5–0.8 GiB. If the
+   engine OOMs at boot, lower `max-model-len` before switching models.
+2. **TP=2 is not unified memory.** Kaggle's 32 GiB only become one pool with
+   `tensor-parallel-size: 2`; without it you get 16 GiB and the second GPU idles.
+
+Outside VRAM: Colab's ~12.7 GB of RAM and ~100 GB of disk handle any download in the
+table above; on Kaggle the Hugging Face cache lives in `~/.cache` (on the bigger disk),
+not in the ~20 GB `/kaggle/working`, so even a 32B AWQ (19 GB) downloads fine — it just
+takes a while.
+
+**Ollama has a different ceiling.** GGUF offloads layers to system RAM, so on Kaggle
+(30 GB RAM + 16 GB VRAM) even a 70B Q4 will load — at a few tokens per second, because
+the CPU layers dominate. vLLM never spills to RAM: it either fits in VRAM or fails.
 
 ## Secrets and `.env`
 
