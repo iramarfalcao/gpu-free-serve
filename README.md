@@ -244,6 +244,7 @@ Kaggle only, using both GPUs:
 | Catalog name | Weights | Why |
 |---|---|---|
 | `qwen2.5-coder-32b-awq-2gpu` | ~19.5 GiB | The best coding model that runs on a free GPU. Needs `tensor-parallel-size: 2`, so Colab free cannot run it. |
+| `devstral-24b-2gpu` | ~14 GiB | Devstral Small 24B, tuned for agentic coding. Served through Ollama, which spreads the layers over both T4s by itself. |
 
 Also worth trying, not in the catalog: `google/codegemma-7b-it` (gated, needs `HF_TOKEN`),
 `Qwen/Qwen2.5-Coder-3B-Instruct` (fp16, ~6.2 GiB), and community 4-bit builds of

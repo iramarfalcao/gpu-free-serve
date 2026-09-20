@@ -58,6 +58,11 @@ models:
     args:
       max-model-len: 8192
 
+  glm-4-9b:
+    engine: ollama
+    id: glm4:9b
+    description: "GLM-4 9B, 4-bit GGUF (~5.5 GiB). Fits one T4, so Colab and Kaggle both work."
+
   phi3.5-mini:
     engine: vllm
     id: microsoft/Phi-3.5-mini-instruct
@@ -67,6 +72,11 @@ models:
       dtype: half
 
   # Kaggle hands you 2x T4: enough for a bigger model with tensor parallelism.
+  devstral-24b-2gpu:
+    engine: ollama
+    id: devstral:24b
+    description: "Devstral Small 24B for agentic coding, 4-bit GGUF (~14 GiB). Kaggle: Ollama splits it across both T4s."
+
   qwen2.5-coder-32b-awq-2gpu:
     engine: vllm
     id: Qwen/Qwen2.5-Coder-32B-Instruct-AWQ
