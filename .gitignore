@@ -1,0 +1,22 @@
+# Secrets — never commit these
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Notebook outputs can contain the API key and the tunnel URL: clear before committing
+.ipynb_checkpoints/
+
+# Local tooling
+.DS_Store
+.vscode/
+.idea/

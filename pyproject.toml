@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpu-free-serve"
+version = "0.1.0"
+description = "Run LLMs on free Colab/Kaggle GPUs and call them from your machine over an OpenAI-compatible endpoint"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Iramar Falcão" }]
+keywords = ["llm", "vllm", "ollama", "colab", "kaggle", "openai-api", "gpu"]
+dependencies = []  # the local client is stdlib-only on purpose
+
+[project.optional-dependencies]
+# Only needed on the notebook side; the notebook installs these itself.
+server = ["pyyaml"]
+ngrok = ["pyngrok"]
+
+[project.scripts]
+gpufree = "gpufree.client.cli:main"
+gpufree-serve = "gpufree.server.serve:main"
+
+[project.urls]
+Homepage = "https://github.com/iramarfalcao/gpu-free-serve"
+Issues = "https://github.com/iramarfalcao/gpu-free-serve/issues"
+
+[tool.setuptools]
+packages = ["gpufree", "gpufree.client", "gpufree.server"]

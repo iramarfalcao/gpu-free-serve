@@ -1,0 +1,77 @@
+# gpu-free-serve model catalog.
+#
+# This is the file you edit to choose what runs. Every entry here can be started
+# with `--model <name>` from the notebook.
+#
+#   engine: vllm   -> Hugging Face model served by vLLM (best throughput)
+#   engine: ollama -> GGUF model served by Ollama (boots in ~1 min, smaller GPUs)
+#
+# `args` are passed straight to the engine (for vLLM: api_server flags).
+
+default: qwen2.5-7b-awq
+
+models:
+  qwen2.5-7b-awq:
+    engine: vllm
+    id: Qwen/Qwen2.5-7B-Instruct-AWQ
+    description: "Good all-rounder. Fits a single 16GB T4 (free Colab / Kaggle)."
+    args:
+      max-model-len: 8192
+      gpu-memory-utilization: 0.90
+
+  qwen2.5-coder-7b-awq:
+    engine: vllm
+    id: Qwen/Qwen2.5-Coder-7B-Instruct-AWQ
+    description: "Coding model. Point Continue/Cursor at the local proxy."
+    args:
+      max-model-len: 8192
+      gpu-memory-utilization: 0.90
+
+  llama3.1-8b-awq:
+    engine: vllm
+    id: hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+    description: "Llama 3.1 8B, 4-bit AWQ."
+    args:
+      max-model-len: 8192
+      gpu-memory-utilization: 0.90
+
+  mistral-7b-awq:
+    engine: vllm
+    id: solidrust/Mistral-7B-Instruct-v0.3-AWQ
+    description: "Mistral 7B v0.3 AWQ."
+    args:
+      max-model-len: 8192
+
+  phi3.5-mini:
+    engine: vllm
+    id: microsoft/Phi-3.5-mini-instruct
+    description: "3.8B in fp16 — light and fast, fits small GPUs."
+    args:
+      max-model-len: 8192
+      dtype: half
+
+  # Kaggle hands you 2x T4: enough for a bigger model with tensor parallelism.
+  qwen2.5-14b-awq-2gpu:
+    engine: vllm
+    id: Qwen/Qwen2.5-14B-Instruct-AWQ
+    description: "14B across 2 GPUs (Kaggle T4 x2). Not for free Colab."
+    args:
+      tensor-parallel-size: 2
+      max-model-len: 8192
+      gpu-memory-utilization: 0.92
+
+  # Alternative engine: up in under a minute, nothing to compile.
+  llama3.1-8b-gguf:
+    engine: ollama
+    id: llama3.1:8b
+    description: "Ollama + GGUF. Faster setup, lower throughput."
+
+  qwen2.5-coder-7b-gguf:
+    engine: ollama
+    id: qwen2.5-coder:7b
+    description: "Ollama, coding oriented."
+
+  embeddings-bge:
+    engine: ollama
+    id: bge-m3
+    description: "Multilingual embeddings (/v1/embeddings)."
