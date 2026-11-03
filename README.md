@@ -31,7 +31,8 @@ curl http://127.0.0.1:8787/v1/chat/completions -H 'Content-Type: application/jso
 - Tunnel through cloudflared (no account) or ngrok (authtoken, optional fixed domain).
 - Endpoint discovery through a secret GitHub Gist: `gpufree connect --gist`.
 - Local reverse proxy (`gpufree proxy`) that injects the key, so clients use `api_key="not-needed"`.
-- CLI: `connect`, `status`, `models`, `chat`, `proxy`, `env`, `disconnect`.
+- CLI: `connect`, `status`, `models`, `chat`, `proxy`, `env`, `ui`, `disconnect`.
+- Local control panel (`gpufree ui`): pick Colab (Google login) or Kaggle, choose a model, idle/session countdown, start the local proxy and copy OpenAI base URL snippets for OpenCode, Pi, Cursor, Continue.
 - Routes exposed by the engine, with vLLM: `/v1/chat/completions`, `/v1/completions`, `/v1/models`, `/v1/embeddings`, with streaming.
 - Automatic handling of T4 limits (`dtype: half`).
 - Zero runtime dependencies on the client side (`pyyaml` and `pyngrok` are only needed on the notebook side, and the notebook installs them).
@@ -66,6 +67,9 @@ gpufree connect --url https://vast-pink-wolf.trycloudflare.com --key 8Kq2...
 gpufree status                # is it alive? which models?
 gpufree chat "write a haiku about GPUs"
 gpufree proxy                 # http://127.0.0.1:8787/v1, no key needed locally
+
+# or use the local panel (browser):
+gpufree ui                    # http://127.0.0.1:8765/
 ```
 
 To list the catalog: `python -m gpufree.server.serve --list`.
@@ -76,7 +80,8 @@ The repository has no test suite and no CI workflow. The notebooks are generated
 
 No roadmap, backlog or TODO is recorded in the repository. Limitations that exist today:
 
-- Sessions end (Colab on idle and after a few hours; Kaggle after 12 hours, about 30 GPU hours per week). Each restart changes the tunnel URL and, unless `GPUFREE_API_KEY` is set, the API key.
+- Sessions end (Colab on idle and after a few hours; Kaggle after 12 hours, about 30 GPU hours per week). Each restart changes the tunnel URL and, unless `GPUFREE_API_KEY` is set, the API key. The UI countdown uses those published ceilings; it cannot prevent Colab/Kaggle from reclaiming the GPU.
+- “Login Google/Kaggle” in `gpufree ui` opens the platform notebooks so you sign in there. There is no OAuth API that starts a free GPU from this app alone.
 - `gpufree connect` stores one endpoint at a time. Using a large chat model and a small autocomplete model together means two notebooks and `--url`/`--key` for each.
 - Not meant for production traffic.
 
@@ -263,6 +268,7 @@ gpufree models                 # model ids being served
 gpufree chat [PROMPT...] [-m MODEL] [-s SYSTEM] [-t TEMP] [--max-tokens N]
 gpufree proxy [--port 8787] [--host 127.0.0.1] [-v]
 gpufree env [--local]          # prints OPENAI_BASE_URL / OPENAI_API_KEY
+gpufree ui [--port 8765]       # local panel: Colab/Kaggle, model, idle clock, local link
 gpufree disconnect             # forget the saved endpoint
 ```
 

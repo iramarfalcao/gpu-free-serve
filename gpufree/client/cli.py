@@ -7,7 +7,7 @@ import sys
 
 from .. import gist
 from ..env import load_dotenv, redact
-from . import api, proxy, state
+from . import api, proxy, state, ui
 
 
 def _connect(args: argparse.Namespace) -> int:
@@ -104,6 +104,11 @@ def _env(args: argparse.Namespace) -> int:
     return 0
 
 
+def _ui(args: argparse.Namespace) -> int:
+    ui.run(host=args.host, port=args.port, open_browser=not args.no_browser)
+    return 0
+
+
 def _disconnect(_: argparse.Namespace) -> int:
     state.clear()
     print("saved endpoint removed.")
@@ -142,6 +147,19 @@ def build_parser() -> argparse.ArgumentParser:
     env = sub.add_parser("env", help="print OPENAI_* variables for your shell")
     env.add_argument("--local", action="store_true", help="pointing at the local proxy")
     env.set_defaults(func=_env)
+
+    panel = sub.add_parser(
+        "ui",
+        help="local control panel: Colab/Kaggle, model, idle countdown, local OpenAI link",
+    )
+    panel.add_argument("--host", default="127.0.0.1")
+    panel.add_argument("--port", type=int, default=ui.DEFAULT_UI_PORT)
+    panel.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="do not open the browser automatically",
+    )
+    panel.set_defaults(func=_ui)
     return parser
 
 

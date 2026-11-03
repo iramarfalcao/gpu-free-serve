@@ -26,20 +26,76 @@ class CatalogError(RuntimeError):
     pass
 
 
+def _parse_catalog_yaml_lite(text: str) -> dict:
+    """Minimal parser for our models.yaml shape (no pyyaml on the client)."""
+    import re
+
+    default = None
+    models: dict[str, dict] = {}
+    current: str | None = None
+    in_models = False
+    in_args = False
+    for raw in text.splitlines():
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        if raw.startswith("default:"):
+            default = raw.split(":", 1)[1].strip().strip("\"'")
+            continue
+        if raw.startswith("models:"):
+            in_models = True
+            continue
+        if not in_models:
+            continue
+        m_name = re.match(r"^  ([A-Za-z0-9._-]+):\s*$", raw)
+        if m_name:
+            current = m_name.group(1)
+            models[current] = {"engine": "vllm", "id": "", "description": "", "args": {}}
+            in_args = False
+            continue
+        if current is None:
+            continue
+        if re.match(r"^    args:\s*$", raw):
+            in_args = True
+            continue
+        if in_args:
+            m_arg = re.match(r"^      ([A-Za-z0-9._-]+):\s*(.+)\s*$", raw)
+            if m_arg:
+                key, val = m_arg.group(1), m_arg.group(2).strip().strip("\"'")
+                try:
+                    models[current]["args"][key] = int(val) if val.isdigit() else float(val)
+                except ValueError:
+                    models[current]["args"][key] = val
+            elif raw.startswith("  ") and not raw.startswith("    "):
+                in_args = False
+            continue
+        m_field = re.match(r'^    (engine|id|description):\s*(.+)\s*$', raw)
+        if m_field:
+            key, val = m_field.group(1), m_field.group(2).strip()
+            if val.startswith('"') and val.endswith('"'):
+                val = val[1:-1]
+            models[current][key] = val
+    if not models:
+        raise CatalogError("lite YAML parse found no models")
+    return {"default": default, "models": models}
+
+
 def _parse(text: str) -> dict:
     try:
         import yaml
     except ImportError:
-        pass  # no pyyaml around: the same catalog written as JSON still works
+        pass  # no pyyaml around: JSON or the lite catalog parser
     else:
         return yaml.safe_load(text)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        raise CatalogError(
-            "reading a YAML catalog needs pyyaml: `pip install pyyaml` "
-            "(already available on Colab/Kaggle)."
-        ) from None
+        try:
+            return _parse_catalog_yaml_lite(text)
+        except CatalogError as exc:
+            raise CatalogError(
+                "reading a YAML catalog needs pyyaml: `pip install pyyaml` "
+                "(already available on Colab/Kaggle)."
+            ) from exc
 
 
 def load_catalog(path: str | Path | None = None) -> tuple[dict[str, ModelSpec], str | None]:
