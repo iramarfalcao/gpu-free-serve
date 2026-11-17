@@ -20,3 +20,8 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Lixo local e artefatos gerados
+*.profraw
+*.profdata
+xcuserdata/
